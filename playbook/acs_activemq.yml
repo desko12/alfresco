@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Activemq Server
+      script: rhel8/04-install_activemq.sh
+      register: activemq_result
+
+    - name: Ensure ActiveMQ installation was successful
+      debug:
+        msg: "ActiveMQ installation completed successfully."
+      when: activemq_result.rc == 0
+

@@ -1,0 +1,15 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Postgresql Server
+      script: rhel8/01-install_postgres-v2.sh
+      register: postgres_result
+
+    - name: Ensure PostgreSQL installation was successful
+      debug:
+        msg: "PostgreSQL installation completed successfully."
+      when: postgres_result.rc == 0
+
+

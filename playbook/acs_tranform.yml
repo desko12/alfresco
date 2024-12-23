@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Transform
+      script: rhel8/08-install_transform.sh
+      register: Transform_result
+
+    - name: Ensure Transform installation was successful
+      debug:
+        msg: "Transform installation completed successfully."
+      when: Transform_result.rc == 0
+

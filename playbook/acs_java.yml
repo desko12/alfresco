@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Java 17
+      script: rhel8/02-install_java.sh
+      register: Java_result
+
+    - name: Ensure Java installation was successful
+      debug:
+        msg: "Java installation completed successfully."
+      when: Java_result.rc == 0
+

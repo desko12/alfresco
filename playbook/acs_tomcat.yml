@@ -1,0 +1,15 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Tomcat server
+      script: rhel8/03-install_tomcat.sh
+      register: tomcat_result
+
+    - name: Ensure Tomcat installation was successful
+      debug:
+        msg: "Tomcat installation completed successfully."
+      when: tomcat_result.rc == 0
+
+

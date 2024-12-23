@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install nginx
+      script: rhel8/10-install_nginx.sh 
+      register: nginx_result
+
+    - name: Ensure nginx installation was successful
+      debug:
+        msg: "Java installation completed successfully."
+      when: nginx_result.rc == 0
+

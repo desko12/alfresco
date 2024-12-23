@@ -1,0 +1,15 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Download Resources
+      script: rhel8/05-download_alfresco_resources.sh
+      register: resources_result
+
+    - name: Ensure Downloading was successful
+      debug:
+        msg: "Resources downloading successfully."
+      when: resources_result.rc == 0
+
+

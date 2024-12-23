@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Alfresco Content App
+      script: rhel8/09-build_aca.sh
+      register: aca_result
+
+    - name: Ensure Alfresco Content App installation was successful
+      debug:
+        msg: "Alfresco Content App installation completed successfully."
+      when: aca_result.rc == 0
+

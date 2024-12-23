@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: start service
+      script: rhel8/11-start_services.sh
+      register: start_result
+
+    - name: Ensure all services start successful
+      debug:
+        msg: "services start successfully."
+      when: start_result.rc == 0
+

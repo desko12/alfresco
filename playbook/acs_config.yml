@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Configure Alfresco
+      script: rhel8/06-install_alfresco.sh
+      register: config_result
+
+    - name: Ensure Configuration was successful
+      debug:
+        msg: "Configuration completed successfully."
+      when: config_result.rc == 0
+

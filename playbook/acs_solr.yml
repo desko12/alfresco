@@ -1,0 +1,14 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Solr
+      script: rhel8/07-install_solr.sh
+      register: solr_result
+
+    - name: Ensure Solr installation was successful
+      debug:
+        msg: "Solr installation/configuration completed successfully."
+      when: solr_result.rc == 0
+

@@ -1,0 +1,104 @@
+---
+- name: Install Alfresco
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Postgresql Server
+      script: rhel8/01-install_postgres.sh
+      register: postgres_result
+
+    - name: Ensure PostgreSQL installation was successful
+      debug:
+        msg: "PostgreSQL installation completed successfully."
+      when: postgres_result.rc == 0
+
+    - name: Install Java 17
+      script: rhel8/02-install_java.sh
+      register: Java_result
+
+    - name: Ensure Java installation was successful
+      debug:
+        msg: "Java installation completed successfully."
+      when: Java_result.rc == 0
+
+    - name: Install Tomcat server
+      script: rhel8/03-install_tomcat.sh
+      register: tomcat_result
+
+    - name: Ensure Tomcat installation was successful
+      debug:
+        msg: "Tomcat installation completed successfully."
+      when: tomcat_result.rc == 0
+
+    - name: Install Activemq Server
+      script: rhel8/04-install_activemq.sh
+      register: activemq_result
+
+    - name: Ensure ActiveMQ installation was successful
+      debug:
+        msg: "ActiveMQ installation completed successfully."
+      when: activemq_result.rc == 0
+  
+    - name: Download Resources
+      script: rhel8/05-download_alfresco_resources.sh
+      register: resources_result
+
+    - name: Ensure Downloading was successful
+      debug:
+        msg: "Resources downloading successfully."
+      when: resources_result.rc == 0
+
+    - name: Configure Alfresco
+      script: rhel8/06-install_alfresco.sh
+      register: config_result
+
+    - name: Ensure Configuration was successful
+      debug:
+        msg: "Configuration completed successfully."
+      when: config_result.rc == 0
+
+    - name: Install Solr
+      script: rhel8/07-install_solr.sh
+      register: solr_result
+
+    - name: Ensure Solr installation was successful
+      debug:
+        msg: "Solr installation/configuration completed successfully."
+      when: solr_result.rc == 0
+    
+    - name: Install Transform
+      script: rhel8/08-install_transform.sh
+      register: Transform_result
+
+    - name: Ensure Transform installation was successful
+      debug:
+        msg: "Transform installation completed successfully."
+      when: Transform_result.rc == 0
+
+    - name: Install Alfresco Content App
+      script: rhel8/09-build_aca.sh
+      register: aca_result
+
+    - name: Ensure Alfresco Content App installation was successful
+      debug:
+        msg: "Alfresco Content App installation completed successfully."
+      when: aca_result.rc == 0
+
+    - name: Install nginx
+      script: rhel8/10-install_nginx.sh 
+      register: nginx_result
+
+    - name: Ensure nginx installation was successful
+      debug:
+        msg: "Java installation completed successfully."
+      when: nginx_result.rc == 0
+
+    - name: start service
+      script: rhel8/11-start_services.sh
+      register: start_result
+
+    - name: Ensure all services start successful
+      debug:
+        msg: "services start successfully."
+      when: start_result.rc == 0
+
