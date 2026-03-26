@@ -1,0 +1,45 @@
+---
+# tasks/cleanup.yml - Nettoyage post-installation
+
+- name: "Supprimer les archives téléchargées dans {{ alf_home }}/download"
+  file:
+    path: "{{ alf_home }}/download"
+    state: absent
+
+- name: "Supprimer le répertoire d'extraction ACS temporaire"
+  file:
+    path: /tmp/alfresco_dist
+    state: absent
+
+- name: "Supprimer le répertoire d'extraction Solr temporaire"
+  file:
+    path: /tmp/solr_dist
+    state: absent
+
+- name: "Supprimer l'archive pdf-renderer temporaire"
+  file:
+    path: "/tmp/alfresco-pdf-renderer-{{ pdf_renderer_version }}-linux.tgz"
+    state: absent
+
+- name: "Vider le cache dnf (RHEL)"
+  command: dnf clean all
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+
+- name: "Vider le cache apt (Debian)"
+  command: apt-get clean
+  when: ansible_os_family == "Debian"
+  changed_when: false
+
+- name: "Supprimer les fichiers temporaires Tomcat (work/)"
+  file:
+    path: "{{ alf_home }}/tomcat/work"
+    state: absent
+
+- name: "Recréer le répertoire work/ vide"
+  file:
+    path: "{{ alf_home }}/tomcat/work"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'

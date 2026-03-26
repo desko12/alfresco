@@ -1,0 +1,5 @@
+---
+- hosts: alfresco
+  become: yes
+  roles:
+    - role: ansible-alfresco-v5

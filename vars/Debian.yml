@@ -1,0 +1,40 @@
+---
+# vars/Debian.yml - Variables spécifiques Debian/Ubuntu
+
+os_packages:
+  - unzip
+  - curl
+  - wget
+  - git
+  - build-essential
+  - imagemagick
+  - libreoffice
+  - libimage-exiftool-perl
+  - python3-psycopg2
+
+pg_package_name:
+  - postgresql
+  - postgresql-contrib
+
+java_package_name: "openjdk-17-jdk"
+
+pg_service: "postgresql"
+pg_hba_conf: "/etc/postgresql/{{ pg_version }}/main/pg_hba.conf"
+pg_initdb_required: false
+
+tomcat_service: "tomcat"
+activemq_service: "activemq"
+solr_service: "solr"
+transform_service: "transform"
+nginx_service: "nginx"
+
+has_selinux: false
+has_firewalld: false
+
+nodejs_setup_url: "https://deb.nodesource.com/setup_lts.x"
+nodejs_package: "nodejs"
+
+# Nginx : utilise sites-available / sites-enabled
+nginx_vhost_dir: "/etc/nginx/sites-available"
+nginx_vhost_file: "alfresco-content-app"
+nginx_sites_enabled_dir: "/etc/nginx/sites-enabled"

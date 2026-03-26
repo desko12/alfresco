@@ -1,0 +1,161 @@
+---
+# tasks/main.yml - Orchestration complète Alfresco Community 23.2.1
+
+- name: "Récupérer les facts système"
+  setup:
+    gather_subset:
+      - distribution
+      - os_family
+
+- name: "Charger les variables OS ({{ ansible_os_family }})"
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
+        - "{{ ansible_os_family }}-{{ ansible_distribution_version }}.yml"
+        - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_distribution }}.yml"
+        - "{{ ansible_os_family }}.yml"
+        - "main.yml"
+      paths: "../vars"
+
+# ---------------------------------------------------------------------------
+# Prérequis système
+# ---------------------------------------------------------------------------
+- name: "Créer le groupe Alfresco"
+  group:
+    name: "{{ alf_group }}"
+    state: present
+    system: yes
+
+- name: "Créer l'utilisateur Alfresco"
+  user:
+    name: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    home: "{{ alf_home }}"
+    shell: /sbin/nologin
+    system: yes
+    create_home: yes
+
+- name: "Mettre à jour le cache des paquets (Debian)"
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: "Activer le dépôt EPEL (RHEL/Rocky)"
+  package:
+    name: epel-release
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: "Activer le module PostgreSQL {{ pg_version }} (RHEL/Rocky)"
+  command: dnf module enable -y postgresql:{{ pg_version }}
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+
+- name: "Installer les paquets OS requis"
+  package:
+    name: "{{ os_packages }}"
+    state: present
+
+- name: "Installer Java {{ java_version }}"
+  package:
+    name: "{{ java_package_name }}"
+    state: present
+
+- name: "Configurer JAVA_HOME"
+  copy:
+    dest: /etc/profile.d/java.sh
+    content: |
+      export JAVA_HOME={{ java_home_path }}
+      export PATH=$JAVA_HOME/bin:$PATH
+    mode: '0644'
+
+- name: "Créer le répertoire de téléchargement"
+  file:
+    path: "{{ alf_home }}/download"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'
+
+# ---------------------------------------------------------------------------
+# Installation des composants
+# ---------------------------------------------------------------------------
+- name: "Installation PostgreSQL"
+  include_tasks: postgres.yml
+
+- name: "Installation ActiveMQ"
+  include_tasks: activemq.yml
+
+- name: "Installation Tomcat + Alfresco ACS"
+  include_tasks: alfresco.yml
+
+- name: "Installation Solr"
+  include_tasks: solr.yml
+
+- name: "Installation Transform Core AIO"
+  include_tasks: transform.yml
+
+- name: "Construction de l'Alfresco Content App (ACA)"
+  include_tasks: aca.yml
+  when: alfresco_install_aca | bool
+
+- name: "Installation et configuration Nginx"
+  include_tasks: nginx.yml
+  when: alfresco_install_nginx | bool
+
+# ---------------------------------------------------------------------------
+# Démarrage des services dans le bon ordre
+# ---------------------------------------------------------------------------
+- name: "Démarrer PostgreSQL"
+  service:
+    name: "{{ pg_service }}"
+    state: started
+    enabled: yes
+
+- name: "Démarrer ActiveMQ"
+  service:
+    name: "{{ activemq_service }}"
+    state: started
+    enabled: yes
+
+- name: "Démarrer Transform"
+  service:
+    name: "{{ transform_service }}"
+    state: started
+    enabled: yes
+
+- name: "Démarrer Tomcat (Alfresco)"
+  service:
+    name: "{{ tomcat_service }}"
+    state: started
+    enabled: yes
+
+- name: "Démarrer Solr"
+  service:
+    name: "{{ solr_service }}"
+    state: started
+    enabled: yes
+
+- name: "Démarrer Nginx"
+  service:
+    name: "{{ nginx_service }}"
+    state: started
+    enabled: yes
+  when: alfresco_install_nginx | bool
+
+- name: "Appliquer les droits finaux sur {{ alf_home }}"
+  file:
+    path: "{{ alf_home }}"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    recurse: yes
+
+# ---------------------------------------------------------------------------
+# Nettoyage post-installation
+# ---------------------------------------------------------------------------
+- name: "Nettoyage post-installation"
+  include_tasks: cleanup.yml

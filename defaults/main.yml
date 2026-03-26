@@ -1,0 +1,14 @@
+---
+# defaults/main.yml
+# Ces valeurs peuvent être surchargées dans l'inventaire ou le playbook
+
+# Version d'Alfresco Community à installer
+acs_version: "23.2.1"
+
+# Activer/désactiver les composants optionnels
+alfresco_install_aca: false    # Alfresco Content App (interface Angular)
+alfresco_install_nginx: false  # Nginx comme reverse proxy
+
+# Serveur nginx
+nginx_server_name: "localhost"
+nginx_port: 80

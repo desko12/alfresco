@@ -1,0 +1,273 @@
+---
+# tasks/alfresco.yml - Installation de Tomcat 10 + Alfresco Content Services 23.2.1
+
+# -------------------------------------------------------------------
+# Installation de Tomcat 10
+# -------------------------------------------------------------------
+- name: "Installer wget (RHEL)"
+  package:
+    name: wget
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: "Télécharger Apache Tomcat {{ tomcat_full }}"
+  get_url:
+    url: "{{ tomcat_url }}"
+    dest: "{{ alf_home }}/download/apache-tomcat-{{ tomcat_full }}.tar.gz"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Extraire Tomcat dans {{ alf_home }}"
+  unarchive:
+    src: "{{ alf_home }}/download/apache-tomcat-{{ tomcat_full }}.tar.gz"
+    dest: "{{ alf_home }}"
+    remote_src: yes
+    creates: "{{ alf_home }}/apache-tomcat-{{ tomcat_full }}"
+
+- name: "Supprimer l'éventuel répertoire tomcat existant (répertoire -> lien)"
+  file:
+    path: "{{ alf_home }}/tomcat"
+    state: absent
+  when: not ansible_check_mode
+
+- name: "Créer le lien symbolique tomcat"
+  file:
+    src: "{{ alf_home }}/apache-tomcat-{{ tomcat_full }}"
+    dest: "{{ alf_home }}/tomcat"
+    state: link
+    force: yes
+
+- name: "Appliquer les droits sur Tomcat"
+  file:
+    path: "{{ alf_home }}/apache-tomcat-{{ tomcat_full }}"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    recurse: yes
+
+- name: "Configurer le contexte SELinux sur les binaires Tomcat (RHEL)"
+  command: >
+    semanage fcontext -a -t bin_t
+    "{{ alf_home }}/apache-tomcat-{{ tomcat_full }}/bin(/.*)?"
+  when: has_selinux | bool
+  changed_when: true
+
+- name: "Appliquer restorecon sur les binaires Tomcat (RHEL)"
+  command: "restorecon -Rv {{ alf_home }}/apache-tomcat-{{ tomcat_full }}/bin"
+  when: has_selinux | bool
+  changed_when: false
+
+- name: "Créer les répertoires Tomcat additionnels"
+  file:
+    path: "{{ alf_home }}/tomcat/{{ item }}"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'
+  loop:
+    - shared/classes
+    - shared/lib
+    - temp
+    - logs
+    - work
+    - conf/Catalina/localhost
+
+- name: "Installer le service systemd Tomcat"
+  template:
+    src: tomcat.service.j2
+    dest: /etc/systemd/system/tomcat.service
+    mode: '0644'
+  notify: reload_systemd
+
+- name: "Activer Tomcat (sans démarrer)"
+  systemd:
+    name: "{{ tomcat_service }}"
+    enabled: yes
+    daemon_reload: yes
+
+- name: "Ouvrir le port 8080 dans firewalld (RHEL)"
+  firewalld:
+    port: "8080/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: has_firewalld | bool
+
+# -------------------------------------------------------------------
+# Téléchargement et installation d'Alfresco ACS
+# -------------------------------------------------------------------
+- name: "Télécharger ACS {{ acs_version }}"
+  get_url:
+    url: "{{ acs_dist_url }}"
+    dest: "{{ alf_home }}/download/acs-dist-{{ acs_version }}.zip"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Créer le répertoire d'extraction temporaire"
+  file:
+    path: /tmp/alfresco_dist
+    state: directory
+    mode: '0755'
+
+- name: "Extraire l'archive ACS"
+  unarchive:
+    src: "{{ alf_home }}/download/acs-dist-{{ acs_version }}.zip"
+    dest: /tmp/alfresco_dist
+    remote_src: yes
+    creates: /tmp/alfresco_dist/web-server
+
+- name: "Créer les répertoires support Alfresco"
+  file:
+    path: "{{ alf_home }}/{{ item }}"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'
+  loop:
+    - keystore
+    - alf_data
+    - amps
+    - bin
+    - modules/platform
+    - modules/share
+
+- name: "Activer le shared.loader dans catalina.properties"
+  replace:
+    path: "{{ alf_home }}/tomcat/conf/catalina.properties"
+    regexp: '^shared\.loader=.*'
+    replace: 'shared.loader=${catalina.base}/shared/classes,${catalina.base}/shared/lib/*.jar'
+
+- name: "Copier les configurations Catalina (localhost)"
+  copy:
+    src: "/tmp/alfresco_dist/web-server/conf/Catalina/localhost/"
+    dest: "{{ alf_home }}/tomcat/conf/Catalina/localhost/"
+    remote_src: yes
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Copier les shared classes"
+  copy:
+    src: "/tmp/alfresco_dist/web-server/shared/classes/"
+    dest: "{{ alf_home }}/tomcat/shared/classes/"
+    remote_src: yes
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Copier le driver JDBC PostgreSQL"
+  copy:
+    src: "/tmp/alfresco_dist/web-server/lib/postgresql-42.6.0.jar"
+    dest: "{{ alf_home }}/tomcat/shared/lib/"
+    remote_src: yes
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Copier les fichiers keystore"
+  shell: "cp -r /tmp/alfresco_dist/keystore/* {{ alf_home }}/keystore/"
+  args:
+    creates: "{{ alf_home }}/keystore/metadata-keystore"
+
+- name: "Copier les WARs Alfresco et Share"
+  copy:
+    src: "/tmp/alfresco_dist/web-server/webapps/{{ item }}"
+    dest: "{{ alf_home }}/tomcat/webapps/{{ item }}"
+    remote_src: yes
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+  loop:
+    - alfresco.war
+    - share.war
+
+- name: "Copier les AMPs"
+  shell: "cp -r /tmp/alfresco_dist/amps/* {{ alf_home }}/amps/"
+  args:
+    creates: "{{ alf_home }}/amps/alfresco-share-services.amp"
+
+- name: "Copier les binaires Alfresco (alfresco-mmt.jar)"
+  shell: "cp -r /tmp/alfresco_dist/bin/* {{ alf_home }}/bin/"
+  args:
+    creates: "{{ alf_home }}/bin/alfresco-mmt.jar"
+
+- name: "Appliquer les AMPs sur alfresco.war"
+  command: >
+    java -jar {{ alf_home }}/bin/alfresco-mmt.jar
+    install {{ alf_home }}/amps
+    {{ alf_home }}/tomcat/webapps/alfresco.war
+    -directory -nobackup -force
+  environment:
+    JAVA_HOME: "{{ java_home_path }}"
+  changed_when: true
+
+- name: "Extraire bcprov dans tomcat/lib (fix Bouncy Castle Java 17)"
+  shell: >
+    unzip -p {{ alf_home }}/tomcat/webapps/alfresco.war
+    WEB-INF/lib/bcprov-jdk18on-1.77.jar
+    > {{ alf_home }}/tomcat/lib/bcprov-jdk18on-1.77.jar
+  args:
+    creates: "{{ alf_home }}/tomcat/lib/bcprov-jdk18on-1.77.jar"
+
+- name: "Appliquer les droits sur bcprov"
+  file:
+    path: "{{ alf_home }}/tomcat/lib/bcprov-jdk18on-1.77.jar"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0644'
+
+- name: "Déployer alfresco-global.properties"
+  template:
+    src: alfresco-global.properties.j2
+    dest: "{{ alf_home }}/tomcat/shared/classes/alfresco-global.properties"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0640'
+  notify: restart_tomcat
+
+- name: "Créer les répertoires pour les WARs extraits"
+  file:
+    path: "{{ alf_home }}/tomcat/webapps/{{ item }}"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'
+  loop:
+    - alfresco
+    - share
+
+- name: "Extraire alfresco.war pour accès logs"
+  unarchive:
+    src: "{{ alf_home }}/tomcat/webapps/alfresco.war"
+    dest: "{{ alf_home }}/tomcat/webapps/alfresco"
+    remote_src: yes
+    creates: "{{ alf_home }}/tomcat/webapps/alfresco/WEB-INF"
+
+- name: "Extraire share.war pour accès logs"
+  unarchive:
+    src: "{{ alf_home }}/tomcat/webapps/share.war"
+    dest: "{{ alf_home }}/tomcat/webapps/share"
+    remote_src: yes
+    creates: "{{ alf_home }}/tomcat/webapps/share/WEB-INF"
+
+- name: "Configurer le chemin du log alfresco (log4j2)"
+  replace:
+    path: "{{ alf_home }}/tomcat/webapps/alfresco/WEB-INF/classes/log4j2.properties"
+    regexp: '^appender\.rolling\.fileName=alfresco\.log'
+    replace: "appender.rolling.fileName={{ alf_home }}/tomcat/logs/alfresco.log"
+  ignore_errors: yes
+
+- name: "Configurer le chemin du log share (log4j2)"
+  replace:
+    path: "{{ alf_home }}/tomcat/webapps/share/WEB-INF/classes/log4j2.properties"
+    regexp: '^appender\.rolling\.fileName=share\.log'
+    replace: "appender.rolling.fileName={{ alf_home }}/tomcat/logs/share.log"
+  ignore_errors: yes
+
+- name: "Appliquer les droits finaux sur {{ alf_home }}"
+  file:
+    path: "{{ alf_home }}"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    recurse: yes
+
+- name: "Démarrer le service Tomcat"
+  service:
+    name: "{{ tomcat_service }}"
+    state: started
+    enabled: yes

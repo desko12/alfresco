@@ -1,0 +1,78 @@
+---
+# tasks/postgres.yml - Installation et configuration de PostgreSQL
+
+- name: "Installer PostgreSQL"
+  package:
+    name: "{{ pg_package_name }}"
+    state: present
+
+- name: "Initialiser PostgreSQL (RHEL/Rocky)"
+  command: postgresql-setup --initdb
+  args:
+    creates: /var/lib/pgsql/data/PG_VERSION
+  when:
+    - ansible_os_family == "RedHat"
+    - pg_initdb_required | bool
+
+- name: "Corriger pg_hba.conf : ident -> md5 (RHEL/Rocky)"
+  replace:
+    path: "{{ pg_hba_conf }}"
+    regexp: '(\s+)ident$'
+    replace: '\1md5'
+  when: ansible_os_family == "RedHat"
+  notify: restart_postgresql
+
+- name: "Corriger pg_hba.conf : peer -> trust pour postgres (Debian)"
+  replace:
+    path: "{{ pg_hba_conf }}"
+    regexp: '^(local\s+all\s+postgres\s+)peer$'
+    replace: '\1trust'
+  when: ansible_os_family == "Debian"
+  notify: restart_postgresql
+
+- name: "Corriger pg_hba.conf : peer -> md5 pour all (Debian)"
+  replace:
+    path: "{{ pg_hba_conf }}"
+    regexp: '^(local\s+all\s+all\s+)peer$'
+    replace: '\1md5'
+  when: ansible_os_family == "Debian"
+  notify: restart_postgresql
+
+- name: "Démarrer et activer PostgreSQL"
+  service:
+    name: "{{ pg_service }}"
+    state: started
+    enabled: yes
+
+- name: "Forcer le redémarrage PostgreSQL pour appliquer pg_hba.conf"
+  meta: flush_handlers
+
+- name: "Créer l'utilisateur PostgreSQL Alfresco"
+  become_user: postgres
+  postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_pass }}"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB,NOCREATEROLE"
+  no_log: true
+
+- name: "Créer la base de données Alfresco"
+  become_user: postgres
+  postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+    encoding: "UTF-8"
+    state: present
+
+- name: "Accorder tous les privilèges sur la base Alfresco"
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ db_name }}"
+    privs: ALL
+    type: database
+    role: "{{ db_user }}"
+
+- name: "Redémarrer PostgreSQL pour finaliser"
+  service:
+    name: "{{ pg_service }}"
+    state: restarted
+    enabled: yes

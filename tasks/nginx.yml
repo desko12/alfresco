@@ -1,0 +1,64 @@
+---
+# tasks/nginx.yml - Installation et configuration Nginx
+
+- name: "Installer Nginx"
+  package:
+    name: nginx
+    state: present
+
+- name: "Activer httpd_can_network_connect (SELinux/RHEL)"
+  command: setsebool -P httpd_can_network_connect 1
+  when: has_selinux | bool
+  changed_when: false
+
+- name: "Déployer la configuration nginx principale (RHEL)"
+  template:
+    src: nginx_main.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: yes
+  when: ansible_os_family == "RedHat"
+  notify: restart_nginx
+
+- name: "Supprimer le vhost default (Debian)"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nginx/sites-available/default
+    - /etc/nginx/sites-enabled/default
+  when: ansible_os_family == "Debian"
+
+- name: "Déployer le vhost Alfresco Content App"
+  template:
+    src: alfresco-content-app.conf.j2
+    dest: "{{ nginx_vhost_dir }}/{{ nginx_vhost_file }}"
+    mode: '0644'
+  notify: restart_nginx
+
+- name: "Activer le vhost ACA (Debian : créer le lien symbolique)"
+  file:
+    src: "{{ nginx_vhost_dir }}/{{ nginx_vhost_file }}"
+    dest: "{{ nginx_sites_enabled_dir }}/{{ nginx_vhost_file }}"
+    state: link
+    force: yes
+  when:
+    - ansible_os_family == "Debian"
+    - nginx_sites_enabled_dir != ""
+
+- name: "Ouvrir le port HTTP dans firewalld (RHEL)"
+  firewalld:
+    service: http
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: has_firewalld | bool
+
+- name: "Vérifier la configuration Nginx"
+  command: nginx -t
+  changed_when: false
+
+- name: "Activer et démarrer Nginx"
+  service:
+    name: "{{ nginx_service }}"
+    state: started
+    enabled: yes

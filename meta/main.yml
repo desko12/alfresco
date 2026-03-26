@@ -1,0 +1,34 @@
+---
+galaxy_info:
+  author: Désiré KOFFI
+  description: Install and configure Alfresco Community 23.2.1 on RHEL/Rocky Linux 8/9/10 and Debian/Ubuntu
+  company: Smile CI
+
+  license: GPLv2
+
+  min_ansible_version: "2.9"
+
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+        - 10
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+  galaxy_tags:
+    - alfresco
+    - ecm
+    - content-management
+    - tomcat
+    - postgresql
+    - solr
+
+dependencies: []

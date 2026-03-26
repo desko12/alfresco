@@ -1,0 +1,55 @@
+---
+# tasks/activemq.yml - Installation d'Apache ActiveMQ 5.x
+
+- name: "Télécharger ActiveMQ {{ activemq_version }}"
+  get_url:
+    url: "{{ activemq_url }}"
+    dest: "{{ alf_home }}/download/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Extraire ActiveMQ dans {{ alf_home }}"
+  unarchive:
+    src: "{{ alf_home }}/download/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+    dest: "{{ alf_home }}"
+    remote_src: yes
+    creates: "{{ alf_home }}/apache-activemq-{{ activemq_version }}"
+
+- name: "Créer le lien symbolique activemq"
+  file:
+    src: "{{ alf_home }}/apache-activemq-{{ activemq_version }}"
+    dest: "{{ alf_home }}/activemq"
+    state: link
+    force: yes
+
+- name: "Appliquer les droits sur le répertoire ActiveMQ"
+  file:
+    path: "{{ alf_home }}/apache-activemq-{{ activemq_version }}"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    recurse: yes
+
+- name: "Configurer le contexte SELinux sur les binaires ActiveMQ (RHEL)"
+  command: >
+    semanage fcontext -a -t bin_t
+    "{{ alf_home }}/apache-activemq-{{ activemq_version }}/bin(/.*)?"
+  when: has_selinux | bool
+  changed_when: true
+
+- name: "Appliquer restorecon sur les binaires ActiveMQ (RHEL)"
+  command: "restorecon -Rv {{ alf_home }}/apache-activemq-{{ activemq_version }}/bin"
+  when: has_selinux | bool
+  changed_when: false
+
+- name: "Installer le service systemd ActiveMQ"
+  template:
+    src: activemq.service.j2
+    dest: /etc/systemd/system/activemq.service
+    mode: '0644'
+  notify: reload_systemd
+
+- name: "Activer et démarrer ActiveMQ"
+  service:
+    name: "{{ activemq_service }}"
+    state: started
+    enabled: yes

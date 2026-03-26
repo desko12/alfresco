@@ -1,0 +1,86 @@
+---
+# vars/main.yml - Configuration globale Alfresco Community 23.2.1
+
+# =============================================================================
+# Utilisateur / Groupe / Répertoires
+# =============================================================================
+alf_user: "alfresco"
+alf_group: "alfresco"
+alf_home: "/srv/alfresco"
+alf_data: "{{ alf_home }}/alf_data"
+
+# =============================================================================
+# Java
+# =============================================================================
+java_version: 17
+java_home_path: "{{ '/usr/lib/jvm/java-17-openjdk-amd64' if ansible_os_family == 'Debian' else '/usr/lib/jvm/java-17-openjdk' }}"
+
+# =============================================================================
+# PostgreSQL
+# =============================================================================
+pg_version: 16
+db_name: "alfresco"
+db_user: "alfresco"
+db_pass: "alfresco"
+db_host: "localhost"
+db_port: 5432
+
+# =============================================================================
+# Tomcat 10
+# =============================================================================
+tomcat_major: 10
+tomcat_full: "10.1.39"
+tomcat_url: "https://archive.apache.org/dist/tomcat/tomcat-{{ tomcat_major }}/v{{ tomcat_full }}/bin/apache-tomcat-{{ tomcat_full }}.tar.gz"
+
+# Keystore passwords (issus des scripts de référence)
+keystore_password: "mp6yc0UD9e"
+keystore_metadata_password: "oKIWzVdEdA"
+
+# =============================================================================
+# ActiveMQ 5.x
+# =============================================================================
+activemq_version: "5.18.7"
+activemq_url: "https://archive.apache.org/dist/activemq/{{ activemq_version }}/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+
+# =============================================================================
+# Alfresco Content Services 23.2.1
+# =============================================================================
+acs_version: "23.2.1"
+acs_dist_url: "https://archive.smile.ci/alfresco/alfresco-content-services-community-distribution/{{ acs_version }}/alfresco-content-services-community-distribution-{{ acs_version }}.zip"
+
+# =============================================================================
+# Alfresco Search Services (Solr)
+# =============================================================================
+solr_version: "2.0.9.1"
+solr_dist_url: "https://archive.smile.ci/alfresco/alfresco-search-services/{{ solr_version }}/alfresco-search-services-{{ solr_version }}.zip"
+solr_shared_secret: "secret"
+
+# =============================================================================
+# Alfresco Transform Core AIO
+# =============================================================================
+transform_version: "5.1.0"
+transform_dist_url: "https://archive.smile.ci/alfresco/alfresco-transform-core-aio/{{ transform_version }}/alfresco-transform-core-aio-{{ transform_version }}.jar"
+
+# Alfresco PDF Renderer
+pdf_renderer_version: "1.2"
+pdf_renderer_url: "https://archive.smile.ci/alfresco/alfresco-pdf-renderer/{{ pdf_renderer_version }}/alfresco-pdf-renderer-{{ pdf_renderer_version }}-linux.tgz"
+
+# =============================================================================
+# Alfresco Content App (ACA)
+# =============================================================================
+aca_version: "4.4.1"
+aca_web_root: "/var/www/alfresco-content-app"
+
+# =============================================================================
+# Nginx
+# =============================================================================
+nginx_server_name: "localhost"
+nginx_port: 80
+
+# =============================================================================
+# Ports des services
+# =============================================================================
+tomcat_port: 8080
+solr_port: 8983
+activemq_port: 61616
+transform_port: 8090

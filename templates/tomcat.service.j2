@@ -1,0 +1,28 @@
+[Unit]
+Description=Apache Tomcat Web Application Container (Alfresco)
+After=network.target postgresql.service activemq.service
+
+[Service]
+Type=forking
+User={{ alf_user }}
+Group={{ alf_group }}
+WorkingDirectory={{ alf_home }}/tomcat
+
+Environment="JAVA_HOME={{ java_home_path }}"
+Environment="CATALINA_PID={{ alf_home }}/tomcat/temp/tomcat.pid"
+Environment="CATALINA_HOME={{ alf_home }}/tomcat"
+Environment="CATALINA_BASE={{ alf_home }}/tomcat"
+Environment="CATALINA_OPTS={{ tomcat_catalina_opts | default('-Xms2048M -Xmx3072M -server -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80') }}"
+Environment="JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom"
+Environment="JAVA_TOOL_OPTIONS=-Dencryption.keystore.type=JCEKS -Dencryption.cipherAlgorithm=DESede/CBC/PKCS5Padding -Dencryption.keyAlgorithm=DESede -Dencryption.keystore.location={{ alf_home }}/keystore/metadata-keystore/keystore -Dmetadata-keystore.password={{ keystore_password }} -Dmetadata-keystore.aliases=metadata -Dmetadata-keystore.metadata.password={{ keystore_metadata_password }} -Dmetadata-keystore.metadata.algorithm=DESede"
+
+ExecStart={{ alf_home }}/tomcat/bin/startup.sh
+ExecStop={{ alf_home }}/tomcat/bin/shutdown.sh
+
+SuccessExitStatus=143
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

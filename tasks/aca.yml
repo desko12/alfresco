@@ -1,0 +1,58 @@
+---
+# tasks/aca.yml - Build de l'Alfresco Content App (ACA)
+
+- name: "Installer Node.js (setup script) - RHEL"
+  shell: "curl -fsSL {{ nodejs_setup_url }} | bash -"
+  args:
+    creates: /etc/yum.repos.d/nodesource*.repo
+  when: ansible_os_family == "RedHat"
+
+- name: "Installer Node.js (setup script) - Debian"
+  shell: "curl -fsSL {{ nodejs_setup_url }} | bash -"
+  args:
+    creates: /etc/apt/sources.list.d/nodesource.list
+  when: ansible_os_family == "Debian"
+
+- name: "Installer Node.js et npm"
+  package:
+    name: "{{ nodejs_package }}"
+    state: present
+
+- name: "Cloner le dépôt Alfresco Content App"
+  git:
+    repo: "https://github.com/Alfresco/alfresco-content-app.git"
+    dest: "{{ alf_home }}/alfresco-content-app"
+    version: "{{ aca_version }}"
+    depth: 1
+    force: yes
+
+- name: "Installer les dépendances npm"
+  community.general.npm:
+    path: "{{ alf_home }}/alfresco-content-app"
+    state: present
+  environment:
+    HOME: /root
+
+- name: "Builder l'application ACA en production"
+  command: npm run build
+  args:
+    chdir: "{{ alf_home }}/alfresco-content-app"
+    creates: "{{ alf_home }}/alfresco-content-app/dist/content-ce/index.html"
+  environment:
+    HOME: /root
+
+- name: "Créer le répertoire web ACA"
+  file:
+    path: "{{ aca_web_root }}"
+    state: directory
+    mode: '0755'
+
+- name: "Copier les fichiers buildés dans le répertoire web"
+  shell: "cp -r {{ alf_home }}/alfresco-content-app/dist/content-ce/* {{ aca_web_root }}/"
+  args:
+    creates: "{{ aca_web_root }}/index.html"
+
+- name: "Configurer SELinux pour le contenu web ACA (RHEL)"
+  command: "chcon -R -t httpd_sys_content_t {{ aca_web_root }}"
+  when: has_selinux | bool
+  changed_when: false

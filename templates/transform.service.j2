@@ -1,0 +1,20 @@
+[Unit]
+Description=Alfresco Transform Core AIO
+After=network.target
+
+[Service]
+Type=simple
+User={{ alf_user }}
+Group={{ alf_group }}
+
+Environment="JAVA_HOME={{ java_home_path }}"
+Environment="LIBREOFFICE_HOME=/usr/lib/libreoffice"
+
+ExecStart=java -jar {{ alf_home }}/transform/alfresco-transform-core-aio-{{ transform_version }}.jar
+ExecStop=/bin/kill -15 $MAINPID
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

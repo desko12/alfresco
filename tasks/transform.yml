@@ -1,0 +1,61 @@
+---
+# tasks/transform.yml - Installation du Transform Core AIO
+
+- name: "Installer les dépendances Transform (RHEL)"
+  package:
+    name:
+      - ImageMagick
+      - libreoffice
+      - perl-Image-ExifTool
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: "Installer les dépendances Transform (Debian)"
+  package:
+    name:
+      - imagemagick
+      - libreoffice
+      - libimage-exiftool-perl
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: "Télécharger alfresco-pdf-renderer {{ pdf_renderer_version }}"
+  get_url:
+    url: "{{ pdf_renderer_url }}"
+    dest: "/tmp/alfresco-pdf-renderer-{{ pdf_renderer_version }}-linux.tgz"
+    mode: '0644'
+
+- name: "Extraire alfresco-pdf-renderer dans /usr/bin"
+  unarchive:
+    src: "/tmp/alfresco-pdf-renderer-{{ pdf_renderer_version }}-linux.tgz"
+    dest: /usr/bin
+    remote_src: yes
+    creates: /usr/bin/alfresco-pdf-renderer
+
+- name: "Créer le répertoire Transform"
+  file:
+    path: "{{ alf_home }}/transform"
+    state: directory
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    mode: '0755'
+
+- name: "Télécharger Transform Core AIO {{ transform_version }}"
+  get_url:
+    url: "{{ transform_dist_url }}"
+    dest: "{{ alf_home }}/transform/alfresco-transform-core-aio-{{ transform_version }}.jar"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Installer le service systemd Transform"
+  template:
+    src: transform.service.j2
+    dest: /etc/systemd/system/transform.service
+    mode: '0644'
+  notify: reload_systemd
+
+- name: "Activer et démarrer Transform"
+  service:
+    name: "{{ transform_service }}"
+    state: started
+    enabled: yes

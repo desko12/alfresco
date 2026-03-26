@@ -1,0 +1,22 @@
+[Unit]
+Description=Alfresco Search Services (Solr)
+After=network.target
+
+[Service]
+Type=forking
+User={{ alf_user }}
+Group={{ alf_group }}
+
+Environment="JAVA_HOME={{ java_home_path }}"
+
+ExecStart={{ alf_home }}/alfresco-search-services/solr/bin/solr start \
+  -a "-Dcreate.alfresco.defaults=alfresco,archive \
+      -Dalfresco.secureComms=secret \
+      -Dalfresco.secureComms.secret={{ solr_shared_secret }}"
+ExecStop={{ alf_home }}/alfresco-search-services/solr/bin/solr stop
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

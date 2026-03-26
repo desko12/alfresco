@@ -1,0 +1,23 @@
+[Unit]
+Description=Apache ActiveMQ Message Broker
+After=network.target
+
+[Service]
+Type=forking
+User={{ alf_user }}
+Group={{ alf_group }}
+
+Environment="JAVA_HOME={{ java_home_path }}"
+Environment="ACTIVEMQ_HOME={{ alf_home }}/activemq"
+Environment="ACTIVEMQ_BASE={{ alf_home }}/activemq"
+Environment="ACTIVEMQ_CONF={{ alf_home }}/activemq/conf"
+Environment="ACTIVEMQ_DATA={{ alf_home }}/activemq/data"
+
+ExecStart={{ alf_home }}/activemq/bin/activemq start
+ExecStop={{ alf_home }}/activemq/bin/activemq stop
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

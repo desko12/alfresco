@@ -1,0 +1,59 @@
+---
+# tasks/solr.yml - Installation d'Alfresco Search Services (Solr)
+
+- name: "Télécharger Alfresco Search Services {{ solr_version }}"
+  get_url:
+    url: "{{ solr_dist_url }}"
+    dest: "{{ alf_home }}/download/alfresco-search-services-{{ solr_version }}.zip"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+
+- name: "Créer le répertoire d'extraction Solr"
+  file:
+    path: /tmp/solr_dist
+    state: directory
+    mode: '0755'
+
+- name: "Extraire Alfresco Search Services"
+  unarchive:
+    src: "{{ alf_home }}/download/alfresco-search-services-{{ solr_version }}.zip"
+    dest: /tmp/solr_dist
+    remote_src: yes
+    creates: /tmp/solr_dist/alfresco-search-services
+
+- name: "Déplacer alfresco-search-services dans {{ alf_home }}"
+  shell: "mv /tmp/solr_dist/alfresco-search-services {{ alf_home }}/alfresco-search-services"
+  args:
+    creates: "{{ alf_home }}/alfresco-search-services"
+
+- name: "Appliquer les droits sur Solr"
+  file:
+    path: "{{ alf_home }}/alfresco-search-services"
+    owner: "{{ alf_user }}"
+    group: "{{ alf_group }}"
+    recurse: yes
+
+- name: "Configurer le contexte SELinux sur les binaires Solr (RHEL)"
+  command: >
+    semanage fcontext -a -t bin_t
+    "{{ alf_home }}/alfresco-search-services/solr/bin(/.*)?"
+  when: has_selinux | bool
+  changed_when: true
+
+- name: "Appliquer restorecon sur les binaires Solr (RHEL)"
+  command: "restorecon -Rv {{ alf_home }}/alfresco-search-services/solr/bin"
+  when: has_selinux | bool
+  changed_when: false
+
+- name: "Installer le service systemd Solr"
+  template:
+    src: solr.service.j2
+    dest: /etc/systemd/system/solr.service
+    mode: '0644'
+  notify: reload_systemd
+
+- name: "Activer et démarrer Solr"
+  service:
+    name: "{{ solr_service }}"
+    state: started
+    enabled: yes

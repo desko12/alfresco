@@ -1,0 +1,43 @@
+---
+# vars/RedHat.yml - Variables spécifiques RHEL/Rocky Linux 8/9/10
+
+os_packages:
+  - unzip
+  - curl
+  - wget
+  - git
+  - gcc-c++
+  - make
+  - policycoreutils-python-utils
+  - ImageMagick
+  - libreoffice
+  - perl-Image-ExifTool
+  - epel-release
+  - python3-psycopg2
+
+pg_package_name:
+  - postgresql-server
+  - postgresql-contrib
+
+java_package_name: "java-17-openjdk-devel"
+
+pg_service: "postgresql"
+pg_hba_conf: "/var/lib/pgsql/data/pg_hba.conf"
+pg_initdb_required: true
+
+tomcat_service: "tomcat"
+activemq_service: "activemq"
+solr_service: "solr"
+transform_service: "transform"
+nginx_service: "nginx"
+
+has_selinux: true
+has_firewalld: true
+
+nodejs_setup_url: "https://rpm.nodesource.com/setup_lts.x"
+nodejs_package: "nodejs"
+
+# Nginx : utilise conf.d
+nginx_vhost_dir: "/etc/nginx/conf.d"
+nginx_vhost_file: "alfresco-content-app.conf"
+nginx_sites_enabled_dir: ""

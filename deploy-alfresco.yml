@@ -1,0 +1,6 @@
+---
+- name: "Déploiement Alfresco Community 23.2.1"
+  hosts: alfresco
+  become: yes
+  roles:
+    - role: ansible-alfresco-v5

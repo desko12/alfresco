@@ -1,0 +1,53 @@
+#
+# Alfresco Global Properties
+# Généré par Ansible - Alfresco Community {{ acs_version }}
+#
+
+#
+# Répertoires de données et keystore
+#
+dir.root={{ alf_data }}
+dir.keystore={{ alf_home }}/keystore/
+
+#
+# Base de données PostgreSQL
+#
+db.username={{ db_user }}
+db.password={{ db_pass }}
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://{{ db_host }}:{{ db_port }}/{{ db_name }}
+
+#
+# Configuration Solr
+#
+solr.secureComms=secret
+solr.sharedSecret={{ solr_shared_secret }}
+solr.host=localhost
+solr.port={{ solr_port }}
+index.subsystem.name=solr6
+
+#
+# Configuration Transform
+#
+localTransform.core-aio.url=http://localhost:{{ transform_port }}
+
+#
+# Configuration Events (ActiveMQ)
+#
+messaging.broker.url=failover:(nio://localhost:{{ activemq_port }})?timeout=3000&jms.useCompression=true
+
+#
+# Paramètres URL Alfresco
+#
+alfresco.context=alfresco
+alfresco.host=localhost
+alfresco.port={{ tomcat_port }}
+alfresco.protocol=http
+
+#
+# Paramètres URL Share
+#
+share.context=share
+share.host=localhost
+share.port={{ tomcat_port }}
+share.protocol=http
